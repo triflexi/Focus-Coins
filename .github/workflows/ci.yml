@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16-alpine
@@ -25,12 +25,19 @@ jobs:
       JWT_SECRET: ci-only-test-secret-at-least-32-characters
       WEB_ORIGIN: http://localhost:5173
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with: {node-version: 22, cache: npm}
       - run: npm ci
       - run: npm run db:generate && npm run db:migrate
-      - run: npm run lint && npm run typecheck && npm test && npm run build
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build applications
+        run: npm run build
+      - name: Test
+        run: npm test
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4

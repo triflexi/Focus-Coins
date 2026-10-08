@@ -7,15 +7,15 @@ permissions:
   contents: write
 jobs:
   apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       EXPO_PUBLIC_API_URL: ${{ vars.ANDROID_API_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Validate production API URL
         run: |
           [[ "$EXPO_PUBLIC_API_URL" == https://*"/api/v1" ]] || { echo 'Set ANDROID_API_URL to https://your-domain/api/v1'; exit 2; }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with: {node-version: 22, cache: npm}
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: 17}
