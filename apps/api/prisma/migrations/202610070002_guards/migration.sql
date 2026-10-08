@@ -1,0 +1,14 @@
+CREATE UNIQUE INDEX "FocusSession_one_active_per_user" ON "FocusSession" ("userId") WHERE status = 'active';
+CREATE UNIQUE INDEX "GameRound_one_active_tower_per_user" ON "GameRound" ("userId") WHERE status = 'active';
+ALTER TABLE "Wallet" ADD CONSTRAINT "Wallet_nonnegative" CHECK (balance >= 0 AND reserved >= 0);
+ALTER TABLE "FocusSession" ADD CONSTRAINT "FocusSession_duration" CHECK (minutes BETWEEN 1 AND 360);
+ALTER TABLE "FocusSession" ADD CONSTRAINT "FocusSession_multiplier" CHECK (multiplier IN (100,150));
+ALTER TABLE "GameRound" ADD CONSTRAINT "GameRound_money" CHECK (stake >= 100 AND payout >= 0);
+ALTER TABLE "GameRound" ADD CONSTRAINT "GameRound_floors" CHECK (floors BETWEEN 0 AND 8);
+ALTER TABLE "Wallet" ADD CONSTRAINT "Wallet_user_fk" FOREIGN KEY ("userId") REFERENCES "User"(id);
+ALTER TABLE "Wallet" ADD CONSTRAINT "Wallet_season_fk" FOREIGN KEY ("seasonKey") REFERENCES "Season"(key);
+ALTER TABLE "FocusSession" ADD CONSTRAINT "FocusSession_user_fk" FOREIGN KEY ("userId") REFERENCES "User"(id);
+ALTER TABLE "Ledger" ADD CONSTRAINT "Ledger_user_fk" FOREIGN KEY ("userId") REFERENCES "User"(id);
+ALTER TABLE "GameRound" ADD CONSTRAINT "GameRound_user_fk" FOREIGN KEY ("userId") REFERENCES "User"(id);
+ALTER TABLE "DailyReward" ADD CONSTRAINT "DailyReward_user_fk" FOREIGN KEY ("userId") REFERENCES "User"(id);
+ALTER TABLE "SeasonResult" ADD CONSTRAINT "SeasonResult_user_fk" FOREIGN KEY ("userId") REFERENCES "User"(id);

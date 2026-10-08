@@ -1,0 +1,14 @@
+import {mkdir,writeFile,copyFile} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+await mkdir('artifacts/release',{recursive:true});
+const run=(args)=>{const result=spawnSync('tar',args,{stdio:'inherit'});if(result.status!==0)throw new Error('Artifact packaging failed');};
+run(['-czf','artifacts/release/api.tar.gz','apps/api/dist','apps/api/prisma','apps/api/package.json','packages/core/dist','packages/core/package.json','apps/web/package.json','apps/mobile/package.json','packages/client/package.json','package.json','package-lock.json']);
+run(['-czf','artifacts/release/web.tar.gz','-C','apps/web','dist']);
+await writeFile('artifacts/release/version.json',JSON.stringify({version:'1.0.0',builtAt:new Date().toISOString(),scope:'local-preview'},null,2));
+const names=['api.tar.gz','web.tar.gz','version.json'];
+const sums=await Promise.all(names.map(async name=>`${createHash('sha256').update(await readFile(`artifacts/release/${name}`)).digest('hex')}  ${name}`));
+await writeFile('artifacts/release/SHA256SUMS',sums.join('\n')+'\n');
+await copyFile('compose.prod.yml','artifacts/release/compose.prod.yml');
+console.log('Release artifacts and SHA256SUMS saved');

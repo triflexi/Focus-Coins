@@ -1,0 +1,166 @@
+name: Release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+  packages: write
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: {POSTGRES_USER: focus, POSTGRES_PASSWORD: test-password, POSTGRES_DB: focus_test}
+        ports: [5432:5432]
+        options: --health-cmd "pg_isready -U focus -d focus_test" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://focus:test-password@localhost:5432/focus_test
+      TEST_DATABASE_URL: postgresql://focus:test-password@localhost:5432/focus_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: npm}
+      - run: npm ci && npm run db:generate && npm run db:migrate
+      - run: npm run lint && npm run typecheck && npm test && npm run build
+      - name: Save compiled release
+        run: |
+          mkdir -p artifacts
+          tar -czf artifacts/api.tar.gz apps/api/dist apps/api/prisma apps/api/package.json packages/core/dist packages/core/package.json apps/web/package.json apps/mobile/package.json packages/client/package.json package.json package-lock.json
+          tar -czf artifacts/web.tar.gz -C apps/web dist
+          printf '{"sha":"%s","builtAt":"%s"}\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" > artifacts/version.json
+          cp -r infra scripts compose.prod.yml .env.example artifacts/
+          cd artifacts && sha256sum api.tar.gz web.tar.gz version.json > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with: {name: compiled-release, path: artifacts, retention-days: 90}
+  images:
+    needs: build
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.api.outputs.digest }}
+      web: ${{ steps.web.outputs.digest }}
+      repository: ${{ steps.repo.outputs.name }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with: {name: compiled-release, path: release}
+      - name: Unpack validated build artifacts
+        run: |
+          cd release && sha256sum -c SHA256SUMS
+          mkdir api web
+          tar -xzf api.tar.gz -C api
+          tar -xzf web.tar.gz -C web
+          cp infra/Dockerfile.release.api api/Dockerfile
+          cp infra/Dockerfile.release.web web/Dockerfile
+          cp infra/nginx.conf web/nginx.conf
+      - id: repo
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - id: api
+        uses: docker/build-push-action@v6
+        with:
+          context: release/api
+          push: true
+          tags: ghcr.io/${{ steps.repo.outputs.name }}/api:${{ github.sha }}
+      - id: web
+        uses: docker/build-push-action@v6
+        with:
+          context: release/web
+          push: true
+          tags: ghcr.io/${{ steps.repo.outputs.name }}/web:${{ github.sha }}
+      - name: Save release in GitHub
+        env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+        run: |
+          tag="build-${GITHUB_SHA}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$tag" release/api.tar.gz release/web.tar.gz release/version.json release/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" release/api.tar.gz release/web.tar.gz release/version.json release/SHA256SUMS --repo "$GITHUB_REPOSITORY" --title "Focus Coins ${GITHUB_SHA:0:7}" --notes "Compiled artifacts and checksums; images are tagged by commit SHA."
+          fi
+  deploy:
+    needs: images
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        env:
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+      - name: Prepare production configuration
+        env:
+          DOMAIN: ${{ vars.DOMAIN }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ "$DOMAIN" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ && "$DOMAIN" == *.* && "$DOMAIN" != *..* ]] || { echo 'Set DOMAIN to a public hostname without a scheme or path'; exit 2; }
+          for name in POSTGRES_PASSWORD JWT_SECRET GRAFANA_ADMIN_PASSWORD; do
+            value="${!name}"
+            [[ "$value" =~ ^[A-Za-z0-9_-]{32,}$ ]] || { echo "Set $name to at least 32 URL-safe characters"; exit 2; }
+          done
+          umask 077
+          printf 'DOMAIN=%s\nPOSTGRES_USER=focus\nPOSTGRES_DB=focus\nPOSTGRES_PASSWORD=%s\nJWT_SECRET=%s\nGRAFANA_ADMIN_PASSWORD=%s\nWEB_ORIGIN=https://%s\nNODE_ENV=production\n' "$DOMAIN" "$POSTGRES_PASSWORD" "$JWT_SECRET" "$GRAFANA_ADMIN_PASSWORD" "$DOMAIN" > "$RUNNER_TEMP/production.env"
+          tar -czf "$RUNNER_TEMP/focus-runtime.tar.gz" compose.prod.yml infra scripts
+      - name: Authenticate VPS to GHCR
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | ssh "$VPS_USER@$VPS_HOST" "docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
+      - name: Deploy immutable images
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          REPO: ${{ needs.images.outputs.repository }}
+          API_DIGEST: ${{ needs.images.outputs.api }}
+          WEB_DIGEST: ${{ needs.images.outputs.web }}
+        run: |
+          set -euo pipefail
+          scp "$RUNNER_TEMP/focus-runtime.tar.gz" "$VPS_USER@$VPS_HOST:/opt/focus-coins/runtime-${GITHUB_SHA}.tar.gz"
+          scp "$RUNNER_TEMP/production.env" "$VPS_USER@$VPS_HOST:/opt/focus-coins/.env.next"
+          ssh "$VPS_USER@$VPS_HOST" bash -s -- "$GITHUB_SHA" "ghcr.io/$REPO/api@$API_DIGEST" "ghcr.io/$REPO/web@$WEB_DIGEST" <<'REMOTE'
+          set -euo pipefail
+          umask 077
+          release_sha=$1
+          api_image=$2
+          web_image=$3
+          cd /opt/focus-coins
+          mkdir -p backups
+          chmod 700 backups
+          if [[ -f .env ]]; then
+            for name in POSTGRES_USER POSTGRES_DB POSTGRES_PASSWORD; do
+              current_value=$(sed -n "s/^$name=//p" .env)
+              next_value=$(sed -n "s/^$name=//p" .env.next)
+              [[ "$current_value" == "$next_value" ]] || { echo "Database setting $name changed; migrate it explicitly before deploying"; exit 2; }
+            done
+          fi
+          if [[ -f compose.prod.yml && -d infra && -d scripts ]]; then
+            tar -czf "backups/runtime-before-$release_sha.tar.gz" compose.prod.yml infra scripts
+          fi
+          install -m 600 .env.next .env
+          rm -- .env.next
+          tar -xzf "runtime-$release_sha.tar.gz"
+          find scripts -type f -name '*.sh' -exec sed -i 's/\r$//' {} +
+          find scripts -type f -name '*.sh' -exec chmod +x {} +
+          bash scripts/deploy.sh "$api_image" "$web_image" "$release_sha"
+          rm -- "runtime-$release_sha.tar.gz"
+          REMOTE

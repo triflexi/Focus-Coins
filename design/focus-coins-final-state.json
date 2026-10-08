@@ -1,0 +1,171 @@
+{
+  "fileKey": "mDR71gHpoFDtLjxyRkk3Ay",
+  "url": "https://www.figma.com/design/mDR71gHpoFDtLjxyRkk3Ay",
+  "status": "complete",
+  "themes": {
+    "dark": {
+      "pageId": "0:1",
+      "modeId": "2:1",
+      "roots": {
+        "timer": "2:146",
+        "running": "2:147",
+        "complete": "2:148",
+        "stats": "2:149",
+        "games": "2:150",
+        "roulette": "2:151",
+        "wheel": "2:152",
+        "tower": "2:153",
+        "rating": "2:154",
+        "profile": "2:155",
+        "login": "2:156",
+        "mobileTimer": "2:157",
+        "mobileGames": "2:158",
+        "mobileRating": "2:159",
+        "register": "9:1844"
+      }
+    },
+    "light": {
+      "pageId": "13:1536",
+      "modeId": "13:0",
+      "roots": {
+        "timer": "13:1537",
+        "running": "13:1835",
+        "complete": "13:2134",
+        "stats": "13:2412",
+        "games": "13:2659",
+        "roulette": "13:2922",
+        "wheel": "13:3448",
+        "tower": "13:3658",
+        "rating": "14:1505",
+        "profile": "14:1722",
+        "login": "14:1969",
+        "register": "14:2054",
+        "mobileTimer": "14:2147",
+        "mobileGames": "14:2293",
+        "mobileRating": "14:2442"
+      }
+    }
+  },
+  "tokens": {
+    "bg": "VariableID:2:5",
+    "panel": "VariableID:2:7",
+    "raised": "VariableID:2:9",
+    "inset": "VariableID:2:11",
+    "silver": "VariableID:2:13",
+    "ink": "VariableID:2:15",
+    "text": "VariableID:2:17",
+    "muted": "VariableID:2:19",
+    "edge": "VariableID:2:21",
+    "shadow": "VariableID:2:23",
+    "blue": "VariableID:2:25",
+    "bright": "VariableID:2:27",
+    "mint": "VariableID:2:29",
+    "gold": "VariableID:2:31",
+    "red": "VariableID:2:33",
+    "green": "VariableID:2:35",
+    "s0": "VariableID:2:36",
+    "s4": "VariableID:2:37",
+    "s8": "VariableID:2:38",
+    "s12": "VariableID:2:39",
+    "s16": "VariableID:2:40",
+    "s20": "VariableID:2:41",
+    "s24": "VariableID:2:42",
+    "s32": "VariableID:2:43",
+    "s40": "VariableID:2:44",
+    "onBlue": "VariableID:13:1523",
+    "rouletteBlack": "VariableID:13:1526",
+    "rouletteRed": "VariableID:13:1529",
+    "rouletteGreen": "VariableID:13:1532",
+    "iconNeutral": "VariableID:13:1535",
+    "onGold": "VariableID:21:1505"
+  },
+  "components": {
+    "buttonPrimary": "2:90",
+    "buttonSecondary": "2:96",
+    "buttonPressed": "2:102",
+    "buttonDisabled": "2:108",
+    "navDefault": "2:115",
+    "navActive": "2:126",
+    "input": "2:138",
+    "badge": "2:144"
+  },
+  "icons": {
+    "coin": "2:56",
+    "timer": "2:62",
+    "stats": "2:67",
+    "games": "2:70",
+    "rank": "2:74",
+    "profile": "2:77",
+    "check": "2:80",
+    "play": "2:83",
+    "tower": "2:86"
+  },
+  "styles": {
+    "Body": "S:a4c7296693eb54db66f15fd99cfd3f0214794cb4,",
+    "Small": "S:4aafc31535db0314e7a645d806ae4be8b54f41c0,",
+    "Caption": "S:be00ad63c9c0fbd931d4913b02a0c2bf1666257a,",
+    "Label": "S:a72999d6cd4e1bcd150520c41e7e61a9ae08f59e,",
+    "Heading": "S:ad7a16819ddf63e0c589e1dee46f76f3aad57265,",
+    "Title": "S:27dc9e54f1ea23b23c481572ba5886c5f084de3c,",
+    "Mono": "S:560ef83e007706bde8965ce223733edda5b626a5,",
+    "Metric": "S:7e437ca7f968469a9cf593294afa10133c1b8d5d,",
+    "Timer": "S:7fc4e18fba291e0fb79027cda5b2f57e65af448c,"
+  },
+  "kitId": "2:55",
+  "validation": {
+    "dark": {
+      "mutatedNodeIds": [
+        "2:55",
+        "2:144"
+      ],
+      "screenCount": 15,
+      "types": {
+        "FRAME": 757,
+        "INSTANCE": 348,
+        "VECTOR": 402,
+        "TEXT": 880,
+        "RECTANGLE": 1152
+      },
+      "fontFamilies": [
+        "PT Sans",
+        "IBM Plex Mono"
+      ],
+      "imageNodes": [],
+      "layoutFindings": []
+    },
+    "light": {
+      "screenCount": 15,
+      "types": {
+        "FRAME": 757,
+        "INSTANCE": 348,
+        "VECTOR": 402,
+        "TEXT": 880,
+        "RECTANGLE": 1152
+      },
+      "fontFamilies": [
+        "PT Sans",
+        "IBM Plex Mono"
+      ],
+      "imageNodes": [],
+      "layoutFindings": []
+    },
+    "fonts": [
+      "PT Sans",
+      "IBM Plex Mono"
+    ],
+    "nativeUI": true,
+    "screens": 30,
+    "prototypeLinks": 150
+  },
+  "completedSteps": [
+    "discovery",
+    "tokens",
+    "reusable components",
+    "15 dark screens",
+    "15 light screens",
+    "navigation",
+    "layout/font/native-layer audit",
+    "visual QA"
+  ],
+  "pendingValidations": []
+}

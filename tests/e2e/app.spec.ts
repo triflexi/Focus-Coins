@@ -1,0 +1,9 @@
+import {test,expect} from '@playwright/test';
+test('account, synchronized timer, cancel, theme and mobile navigation',async({page,context})=>{
+  const name=`qa_${Date.now()}`;
+  await page.goto('/');await page.getByRole('button',{name:'Регистрация',exact:true}).click();await page.getByLabel('Логин',{exact:true}).fill(name);await page.getByLabel('Никнейм',{exact:true}).fill(name);await page.getByLabel('Пароль',{exact:true}).fill('test-password-123');await page.getByRole('button',{name:'Создать аккаунт'}).click();await expect(page.getByRole('heading',{name:'Время для главного'})).toBeVisible();
+  await page.getByLabel('Своя длительность в минутах').fill('1');await page.getByRole('button',{name:'Начать сессию'}).click();await expect(page.getByText('СЕССИЯ ИДЁТ',{exact:true})).toBeVisible();await page.reload();await expect(page.getByText('СЕССИЯ ИДЁТ',{exact:true})).toBeVisible();
+  const second=await context.newPage();await second.goto('/');await expect(second.getByText('СЕССИЯ ИДЁТ',{exact:true})).toBeVisible();await second.close();
+  await page.getByRole('button',{name:'Отменить сессию',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Отменить',exact:true}).click();await expect(page.getByText('ГОТОВЫ НАЧАТЬ?',{exact:true})).toBeVisible();
+  await page.locator('.sidebar').getByRole('button',{name:'Профиль',exact:true}).click();await page.getByRole('button',{name:'Светлая',exact:true}).click();await expect(page.locator('html')).toHaveAttribute('data-theme','light');await page.setViewportSize({width:390,height:844});await page.locator('.mobile-nav').getByRole('button',{name:'Игры',exact:true}).click();await expect(page.getByRole('heading',{name:'Монеты в игре'})).toBeVisible();await expect(page.locator('body')).toHaveJSProperty('scrollWidth',390);
+});

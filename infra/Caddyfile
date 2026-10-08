@@ -1,0 +1,7 @@
+{$DOMAIN} {
+  encode gzip zstd
+  reverse_proxy web:80
+}
+grafana.{$DOMAIN} {
+  reverse_proxy grafana:3000
+}

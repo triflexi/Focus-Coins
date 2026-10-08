@@ -1,0 +1,45 @@
+name: focus-coins
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-focus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-focus_local_password}
+      POSTGRES_DB: ${POSTGRES_DB:-focus}
+    ports: ["127.0.0.1:55432:5432"]
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.api
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-focus}:${POSTGRES_PASSWORD:-focus_local_password}@db:5432/${POSTGRES_DB:-focus}
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-please-change-2026}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      NODE_ENV: development
+      PORT: 3000
+    depends_on:
+      db: {condition: service_healthy}
+    ports: ["127.0.0.1:${API_LOCAL_PORT:-3000}:3000"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  web:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.web
+    ports: ["127.0.0.1:8080:80"]
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+volumes:
+  postgres-data:

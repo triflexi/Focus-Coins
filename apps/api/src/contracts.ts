@@ -1,0 +1,17 @@
+import type {OpenAPIObject,SchemaObject} from '@nestjs/swagger';
+const string:SchemaObject={type:'string'},number:SchemaObject={type:'number'},integer:SchemaObject={type:'integer'},boolean:SchemaObject={type:'boolean'},amount:SchemaObject={type:'string',pattern:'^-?\\d+\\.\\d{2}$',example:'100.00'};
+const object=(properties:Record<string,any>,optional:string[]=[]):SchemaObject=>({type:'object',properties,required:Object.keys(properties).filter(k=>!optional.includes(k))});
+const ref=(name:string)=>({$ref:`#/components/schemas/${name}`});
+const array=(items:any):SchemaObject=>({type:'array',items});
+export function contracts(doc:OpenAPIObject){
+ const session=object({id:string,minutes:integer,startedAt:string,endsAt:string,status:string,reward:amount,multiplier:number});
+ const round=object({id:string,kind:string,stake:amount,payout:amount,net:amount,status:string,result:{type:'object',additionalProperties:true},floors:integer,picks:array(integer),expiresAt:string,createdAt:string});
+ const ranking=object({userId:string,nickname:string,balance:amount,rank:integer});
+ const nullableRef=(name:string)=>({nullable:true,allOf:[ref(name)]});
+ const dashboard=object({serverTime:string,user:object({id:string,login:string,nickname:string,createdAt:string}),season:object({key:string,endsAt:string}),balance:amount,reserved:amount,rankingBalance:amount,rank:integer,active:nullableRef('Session'),history:array(ref('Session')),rounds:array(ref('Round')),tower:nullableRef('Round'),daily:object({minutes:integer,streak:integer,cycle:integer,awarded:boolean,boostUntil:{type:'string',nullable:true}}),stats:object({totalMinutes:integer,weekMinutes:integer,monthMinutes:integer,completed:integer,cancelled:integer,focusCoins:amount,bonusCoins:amount,gameNet:amount,days:array(object({day:string,minutes:integer}))}),ledger:array(object({id:string,kind:string,amount:amount,createdAt:string}))});
+ doc.components??={};doc.components.schemas={...doc.components.schemas,Session:session,Round:round,Dashboard:dashboard,Rank:ranking,Leaderboard:object({season:string,rows:array(ref('Rank')),self:nullableRef('Rank'),archives:array(string)}),Tokens:object({accessToken:string,refreshToken:string},['refreshToken']),Ok:object({ok:boolean})};
+ for(const [path,item]of Object.entries(doc.paths)){for(const method of ['get','post','patch'] as const){const op=item?.[method];if(!op)continue;let response='Ok';if(path.includes('/auth/')&&!path.endsWith('logout'))response='Tokens';else if(path.endsWith('dashboard'))response='Dashboard';else if(path.endsWith('leaderboard'))response='Leaderboard';else if(path.includes('/focus'))response='Session';else if(path.includes('/games/')||path.includes('/tower/'))response='Round';op.responses={[method==='post'?'201':'200']:{description:'Successful response',content:{'application/json':{schema:ref(response)}}},'400':{description:'Invalid input or insufficient balance'},'401':{description:'Authentication required'},'409':{description:'Conflicting state or idempotency key'},'429':{description:'Rate limit exceeded'}};if(path.includes('/auth/'))op.security=[];}}
+ for(const path of ['/api/v1/auth/refresh','/api/v1/auth/logout'])doc.paths[path].post!.requestBody={required:false,content:{'application/json':{schema:object({refreshToken:string},['refreshToken'])}}};
+ doc.paths['/api/v1/profile/password'].post!.requestBody={required:true,content:{'application/json':{schema:object({current:string,next:{type:'string',minLength:8,maxLength:128}})}}};
+ return doc;
+}

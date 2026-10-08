@@ -1,0 +1,16 @@
+import 'reflect-metadata';
+import {config} from 'dotenv';
+import {NestFactory} from '@nestjs/core';
+import {DocumentBuilder,SwaggerModule} from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import {AppModule,requestDuration} from './app.js';
+import {contracts} from './contracts.js';
+config({path:'../../.env'});config();
+if(!process.env.JWT_SECRET||process.env.JWT_SECRET.length<32)throw new Error('Set JWT_SECRET (at least 32 characters)');
+const app=await NestFactory.create(AppModule);app.enableShutdownHooks();app.use(helmet());app.use(cookieParser());app.enableCors({origin:process.env.WEB_ORIGIN,credentials:true});
+const buckets=new Map<string,{count:number;until:number}>();
+app.use((req:any,res:any,next:()=>void)=>{const start=performance.now();res.on('finish',()=>requestDuration.observe({method:req.method,route:req.route?.path??'other',status:String(res.statusCode)},(performance.now()-start)/1000));const group=req.path.includes('/auth/')?'auth':req.path.includes('/games/')||req.path.includes('/tower/')?'games':null;if(group&&req.method==='POST'){const key=`${req.ip}:${group}`,now=Date.now(),b=buckets.get(key);const current=!b||b.until<=now?{count:0,until:now+60000}:b;current.count++;buckets.set(key,current);if(current.count>(group==='auth'?20:90)){res.set('Retry-After','60').status(429).json({message:'Слишком много запросов. Подождите минуту.'});return;}}if(buckets.size>10000)for(const[k,b]of buckets)if(b.until<Date.now())buckets.delete(k);next();});
+const doc=contracts(SwaggerModule.createDocument(app,new DocumentBuilder().setTitle('Focus Coins API').setVersion('1.0').addBearerAuth().build()));SwaggerModule.setup('api/docs',app,doc);
+app.use((error:any,_req:any,res:any,next:any)=>{if(error instanceof SyntaxError){res.status(400).json({message:'Invalid JSON'});return;}next(error);});
+await app.listen(Number(process.env.PORT??3000),'0.0.0.0');

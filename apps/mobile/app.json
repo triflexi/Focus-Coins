@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Focus Coins",
+    "slug": "focus-coins",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "package": "com.focuscoins.app",
+      "versionCode": 1,
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "USE_EXACT_ALARM",
+        "SCHEDULE_EXACT_ALARM"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-notifications",
+      "./plugins/network.cjs"
+    ]
+  }
+}

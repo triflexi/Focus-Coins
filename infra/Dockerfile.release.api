@@ -1,0 +1,10 @@
+FROM node:22-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+# Context is the already-built release artifact, not the source checkout.
+COPY . .
+RUN npm ci --omit=dev --workspace @focus/api --workspace @focus/core && npm run db:generate -w @focus/api
+USER node
+WORKDIR /app/apps/api
+EXPOSE 3000
+CMD ["node", "dist/main.js"]

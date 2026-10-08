@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+model User {
+  id String @id @default(uuid())
+  login String @unique
+  nickname String @unique
+  passwordHash String
+  streak Int @default(0)
+  lastRewardDay String?
+  boostUntil DateTime?
+  createdAt DateTime @default(now())
+}
+model RefreshToken {
+  hash String @id
+  userId String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+model FocusSession {
+  id String @id @default(uuid())
+  userId String
+  minutes Int
+  multiplier Int @default(100)
+  startedAt DateTime
+  endsAt DateTime
+  status String @default("active")
+  reward BigInt @default(0)
+  @@index([status, endsAt])
+  @@index([userId, endsAt])
+}
+model Season {
+  key String @id
+  startsAt DateTime
+  endsAt DateTime
+  closedAt DateTime?
+}
+model Wallet {
+  id String @id @default(uuid())
+  userId String
+  seasonKey String
+  balance BigInt @default(0)
+  reserved BigInt @default(0)
+  @@unique([userId, seasonKey])
+  @@index([seasonKey])
+}
+model Ledger {
+  id String @id @default(uuid())
+  userId String
+  seasonKey String
+  kind String
+  amount BigInt
+  reference String @unique
+  createdAt DateTime
+  @@index([userId, createdAt])
+}
+model DailyReward {
+  id String @id @default(uuid())
+  userId String
+  day String
+  cycle Int
+  amount BigInt
+  createdAt DateTime
+  @@unique([userId, day])
+}
+model GameRound {
+  id String @id @default(uuid())
+  userId String
+  seasonKey String
+  kind String
+  stake BigInt
+  payout BigInt @default(0)
+  status String
+  result Json
+  hazards Int[]
+  picks Int[]
+  floors Int @default(0)
+  createdAt DateTime
+  expiresAt DateTime
+  @@index([status, expiresAt])
+  @@index([userId, createdAt])
+}
+model SeasonResult {
+  id String @id @default(uuid())
+  userId String
+  nickname String
+  seasonKey String
+  balance BigInt
+  rank Int
+  @@unique([userId, seasonKey])
+}
+model Idempotency {
+  id String @id @default(uuid())
+  userId String
+  key String
+  fingerprint String
+  response Json
+  createdAt DateTime @default(now())
+  @@unique([userId, key])
+}
+model Visit {
+  userId String @id
+  lastActivity DateTime
+  count Int @default(1)
+}

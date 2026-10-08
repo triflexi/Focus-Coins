@@ -1,0 +1,26 @@
+{
+  "name": "@focus/web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@focus/client": "*",
+    "@focus/core": "*",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "@fontsource/pt-sans": "^5.2.7",
+    "@fontsource/ibm-plex-mono": "^5.2.7"
+  },
+  "devDependencies": {
+    "vite": "^7.1.7",
+    "@vitejs/plugin-react": "^5.0.3",
+    "@types/react": "~19.1.10",
+    "@types/react-dom": "^19.1.9"
+  }
+}
