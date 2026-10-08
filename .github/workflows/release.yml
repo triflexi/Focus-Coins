@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment: production
     env:
-      VPS_SSH_PORT: ${{ vars.VPS_SSH_PORT }}
+      VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT || '22' }}
     permissions:
       contents: read
       packages: read
