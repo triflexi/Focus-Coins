@@ -97,6 +97,8 @@ jobs:
     if: vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-24.04
     environment: production
+    env:
+      VPS_SSH_PORT: ${{ vars.VPS_SSH_PORT || '7777' }}
     permissions:
       contents: read
       packages: read
@@ -132,7 +134,7 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: printf '%s' "$GHCR_TOKEN" | ssh "$VPS_USER@$VPS_HOST" "docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
+        run: printf '%s' "$GHCR_TOKEN" | ssh -p "$VPS_SSH_PORT" "$VPS_USER@$VPS_HOST" "docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
       - name: Deploy immutable images
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -142,9 +144,9 @@ jobs:
           WEB_DIGEST: ${{ needs.images.outputs.web }}
         run: |
           set -euo pipefail
-          scp "$RUNNER_TEMP/focus-runtime.tar.gz" "$VPS_USER@$VPS_HOST:/opt/focus-coins/runtime-${GITHUB_SHA}.tar.gz"
-          scp "$RUNNER_TEMP/production.env" "$VPS_USER@$VPS_HOST:/opt/focus-coins/.env.next"
-          ssh "$VPS_USER@$VPS_HOST" bash -s -- "$GITHUB_SHA" "ghcr.io/$REPO/api@$API_DIGEST" "ghcr.io/$REPO/web@$WEB_DIGEST" <<'REMOTE'
+          scp -P "$VPS_SSH_PORT" "$RUNNER_TEMP/focus-runtime.tar.gz" "$VPS_USER@$VPS_HOST:/opt/focus-coins/runtime-${GITHUB_SHA}.tar.gz"
+          scp -P "$VPS_SSH_PORT" "$RUNNER_TEMP/production.env" "$VPS_USER@$VPS_HOST:/opt/focus-coins/.env.next"
+          ssh -p "$VPS_SSH_PORT" "$VPS_USER@$VPS_HOST" bash -s -- "$GITHUB_SHA" "ghcr.io/$REPO/api@$API_DIGEST" "ghcr.io/$REPO/web@$WEB_DIGEST" <<'REMOTE'
           set -euo pipefail
           umask 077
           release_sha=$1
